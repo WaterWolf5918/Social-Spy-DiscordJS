@@ -21,12 +21,12 @@ export class refreshChannel extends EventEmitter{
         };
         let lastUpdate = Date.now() - 30000;
         let lock = false;
-        console.log(`Listening For New Videos For Channel ${channelID}`);
+        // console.log(`Listening For New Videos For Channel ${channelID}`);
         setInterval(async () => {
             // console.log(Date.now() - lastUpdate + 'Locked=' + lock);
             if (lock) return;
             if (((Date.now() - lastUpdate) / 1000) >= 30){
-                console.log('Refreshing Feed');
+                // console.log('Refreshing Feed');
                 lock = true;
                 await this.refreshFeed();
                 lastUpdate = Date.now();

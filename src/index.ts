@@ -80,6 +80,16 @@ async function initializeCommands() {
                 t.push(commands[i].commandBuilder);
             }
         }
+        // Delete Commands
+        // await rest.put(Routes.applicationGuildCommands(config.clientID, '1330003358614028378'), { body: [] })
+        //     .then(() => console.log('Successfully deleted all guild commands.'))
+        //     .catch(console.error);
+    
+        // // for global commands
+        // await rest.put(Routes.applicationCommands(config.clientID), { body: [] })
+        //     .then(() => console.log('Successfully deleted all application commands.'))
+        //     .catch(console.error);
+
 
         await rest.put(
 
@@ -117,7 +127,7 @@ client.on('ready', async () => {
         YtUsers.forEach(async (user: string) => {
             const ytChannel = new refreshChannel(user,config.apiKey);
 
-            fallbackChannel.send(`Listening to ${user}`);
+            // fallbackChannel.send(`Listening to ${user}`);
             ytChannel.on('newVideo',(updatedEntry) => {
                 handleYoutubeRefresh(updatedEntry,guildConfig,fallbackChannel,client);
             });
