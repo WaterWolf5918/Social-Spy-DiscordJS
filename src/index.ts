@@ -10,8 +10,6 @@ import { getEntryType, refreshChannel } from './refreshEngine.ts';
 
 // Variables \\
 
-/**@deprecated */
-const __dirname = import.meta.dirname;
 
 const config = loadConfig('./config.json');
 const rest = new REST({ version: '9' }).setToken(config.token); // For slash commands
@@ -21,23 +19,8 @@ export const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
-        // GatewayIntentBits.GuildBans,
-        // GatewayIntentBits.GuildEmojisAndStickers,
-        // GatewayIntentBits.GuildIntegrations,
-        // GatewayIntentBits.GuildWebhooks,
-        // GatewayIntentBits.GuildInvites,
-        // GatewayIntentBits.GuildVoiceStates,
-        // GatewayIntentBits.GuildPresences,
         GatewayIntentBits.GuildMessages,
-        // GatewayIntentBits.GuildMessageReactions,
-        // GatewayIntentBits.GuildMessageTyping,
-        // GatewayIntentBits.DirectMessages,
-        // GatewayIntentBits.DirectMessageReactions,
-        // GatewayIntentBits.DirectMessageTyping,
         GatewayIntentBits.MessageContent,
-        // GatewayIntentBits.GuildScheduledEvents,
-        // GatewayIntentBits.AutoModerationConfiguration,
-        // GatewayIntentBits.AutoModerationExecution
     ]
 });
 
@@ -50,7 +33,8 @@ function loadConfig(file: string) {
     if(!fs.existsSync(file)) {
         const json = {
             'token': 'BOT TOKEN',
-            'clientID': 'CLIENT ID'
+            'clientID': 'CLIENT ID',
+            'googleApiKey': 'GOOGLE API KEY'
         };
         fs.writeFileSync(file,JSON.stringify(json,null,4));
         throw new Error(chalk.redBright('\nConfig File Not Found, Creating...\nPlease add your bot token and clientID to the config.'));
@@ -134,7 +118,7 @@ client.on('ready', async () => {
             const ytChannel = new refreshChannel(user,config.apiKey);
 
             fallbackChannel.send(`Listening to ${user}`);
-            ytChannel.on('newVideo',async (updatedEntry) => {
+            ytChannel.on('newVideo',(updatedEntry) => {
                 handleYoutubeRefresh(updatedEntry,guildConfig,fallbackChannel,client);
             });
         });
@@ -169,50 +153,9 @@ client.on('ready', async () => {
                 fallbackChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded content!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# ${client.user?.tag} Was unable to detect what media type this upload was.\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
             });
     }
-    // if (!json.get('channel') && !guildConfig.role) {
-    //     Logger.error('No Default Channel and or Role');
-    //     return;
-    // }
-    // const channel = await client.channels.cache.get(json.get('channel'));
-    // if (!channel.isTextBased() && !channel.isSendable()) return;
-    // const textChannel = channel as TextChannel;
-    // const users = json.get('users');
-    // if (!users || users.length < 1) {
-    //     textChannel.send('No Users');
-    // }
-    // users.forEach(async user => {
-    //     const ytChannel = new refreshChannel(user,config.apiKey);
-
-    //     textChannel.send(`Listening to ${user}`);
-    //     ytChannel.on('newVideo',async (updatedEntry) => {
-    //         textChannel.send(`# Type: ${await ytChannel.getEntryType(updatedEntry)}`);
-    //         textChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded a video!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}`);
-
-    //         // console.log('Latest Video Changed, Adding To Playlist... (Coming Soon)');
-    //         console.log('New Latest Video Info:');
-    //         console.log(`    Channel Name: ${updatedEntry.author.name}`);
-    //         console.log(`    Video Name: ${updatedEntry.title}`);
-    //         console.log(`    Video Type: ${await ytChannel.getEntryType(updatedEntry)}`);
-    //     });
-
-        
-    // });
 });
 
 
-
-// client.on('messageCreate', async (message) => {
-//     const tokens = message.content.toLowerCase().split(' ');
-//     const messageString: string = message.content;
-//     // console.log(message.content.length);
-//     // if (message.content.length < 2)
-//     try{
-//         songConvert(message);
-//     } catch(error) {
-//         message.reply(`<@877743969503682612>\n[Internal Error] songConvert Failed\nError:\n${error}`);
-//     }
-
-// });
 
 
 client.on('interactionCreate', async interaction => {
@@ -225,7 +168,6 @@ client.on('interactionCreate', async interaction => {
         }
     }
 });
-
 
 // Init \\
 
