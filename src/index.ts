@@ -5,7 +5,6 @@ import * as fs from 'node:fs';
 import chalk from 'npm:chalk';
 import { Logger } from './logger.ts';
 import { Command } from './command.ts';
-import { songConvert } from './modules/songConvert.ts';
 import { ConfigHelper } from './utils.ts';
 import { getEntryType, refreshChannel } from './refreshEngine.ts';
 
