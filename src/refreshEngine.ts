@@ -10,6 +10,7 @@ export class refreshChannel extends EventEmitter{
     protected channelID: string;
     protected apiKey: string;
     private parser: XMLParser;
+    private interval: number;
     constructor(channelID: string, apiKey: string){
         super();
         this.parser = new XMLParser();
@@ -19,15 +20,17 @@ export class refreshChannel extends EventEmitter{
             id: null,
             published: null
         };
+        
         let lastUpdate = Date.now() - 30000;
         let lock = false;
         // console.log(`Listening For New Videos For Channel ${channelID}`);
-        setInterval(async () => {
+        this.interval = setInterval(async () => {
             // console.log(Date.now() - lastUpdate + 'Locked=' + lock);
             if (lock) return;
             if (((Date.now() - lastUpdate) / 1000) >= 30){
                 // console.log('Refreshing Feed');
                 lock = true;
+                console.log(`Tick: ${channelID}`);
                 await this.refreshFeed();
                 lastUpdate = Date.now();
                 lock = false;
@@ -64,7 +67,9 @@ export class refreshChannel extends EventEmitter{
             writeFileSync(`./database/${updatedEntry['yt:channelId']}.json`,JSON.stringify(knownIds));
         }
     }
-
+    destory(){
+        clearInterval(this.interval);
+    }
 }
 
 export async function getEntryType(entry: Record<string,string | number>,apiKey: string): Promise<'video' | 'live' | 'short'>{

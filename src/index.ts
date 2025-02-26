@@ -11,7 +11,9 @@ import { getEntryType, refreshChannel } from './refreshEngine.ts';
 // Variables \\
 
 
-const config = loadConfig('./config.json');
+export const config = loadConfig('./config.json');
+// eslint-disable-next-line prefer-const
+export let channelList: Record<string,refreshChannel> = {};
 const rest = new REST({ version: '9' }).setToken(config.token); // For slash commands
 const commands: Command[] = [];
 
@@ -120,52 +122,54 @@ client.on('ready', async () => {
             Logger.error('No Default Channel and or Role');
             return;
         }
-        const fallbackChannel = (await client.channels.cache.get(guildConfig.fallbackChannel) as TextChannel);
+
         const YtUsers = guildConfig.YtUsers;
         if (!YtUsers || YtUsers.length < 1) return;
 
         YtUsers.forEach(async (user: string) => {
-            const ytChannel = new refreshChannel(user,config.apiKey);
-
+            channelList[user] = new refreshChannel(user,config.apiKey);
+            
             // fallbackChannel.send(`Listening to ${user}`);
-            ytChannel.on('newVideo',(updatedEntry) => {
-                handleYoutubeRefresh(updatedEntry,guildConfig,fallbackChannel,client);
+            channelList[user].on('newVideo',(updatedEntry) => {
+                handleYoutubeRefresh(updatedEntry,guildConfig);
             });
         });
     });
     
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    function handleYoutubeRefresh(updatedEntry: any,guildConfig: Record<string,string | number>,fallbackChannel: TextChannel,client: Client){
-        getEntryType(updatedEntry,config.apiKey)
-            .then(async type => {
-                switch (type) {
-                    case 'video': {
-                        if (typeof guildConfig.videosChannel == 'string'){
-                            const textChannel = (await client.channels.cache.get(guildConfig.videosChannel) as TextChannel);
-                            textChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded a video!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
-                        } else {
-                            fallbackChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded content!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# ${client.user?.tag} Was unable to find a dedicated textChannel.\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
-                        }
-                        break;  
-                    }
-                    case 'short': {
-                        if (typeof guildConfig.shortsChannel == 'string'){
-                            const textChannel = (await client.channels.cache.get(guildConfig.shortsChannel) as TextChannel);
-                            textChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded a short!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
-                        } else {
-                            fallbackChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded content!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# ${client.user?.tag} Was unable to find a dedicated textChannel.\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
-                        }
-                        break;  
-                    }
-                }
-            }).catch(e => {
-                fallbackChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded content!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# ${client.user?.tag} Was unable to detect what media type this upload was.\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
-            });
-    }
+    
+
 });
 
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function handleYoutubeRefresh(updatedEntry: any,guildConfig: Record<string,string>){
+    const fallbackChannel = (await client.channels.cache.get(guildConfig.fallbackChannel) as TextChannel);
+    getEntryType(updatedEntry,config.apiKey)
+        .then(async type => {
+            switch (type) {
+                case 'video': {
+                    if (typeof guildConfig.videosChannel == 'string'){
+                        const textChannel = (await client.channels.cache.get(guildConfig.videosChannel) as TextChannel);
+                        textChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded a video!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
+                    } else {
+                        fallbackChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded content!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# ${client.user?.tag} Was unable to find a dedicated textChannel.\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
+                    }
+                    break;  
+                }
+                case 'short': {
+                    if (typeof guildConfig.shortsChannel == 'string'){
+                        const textChannel = (await client.channels.cache.get(guildConfig.shortsChannel) as TextChannel);
+                        textChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded a short!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
+                    } else {
+                        fallbackChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded content!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# ${client.user?.tag} Was unable to find a dedicated textChannel.\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
+                    }
+                    break;  
+                }
+            }
+        }).catch(e => {
+            fallbackChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded content!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# ${client.user?.tag} Was unable to detect what media type this upload was.\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
+        });
+}
 
 
 client.on('interactionCreate', async interaction => {
