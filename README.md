@@ -12,7 +12,7 @@ Social-Spy-DiscordJS is a Discord bot that monitors social media platforms (such
 
 ### Prerequisites
 
-* Node.js (v16 or later)
+* Deno (4.1 or later)
 * Discord.js (v14 or later)
 * A YouTube Data API key
 * A Discord bot token
