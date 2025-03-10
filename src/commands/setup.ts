@@ -1,11 +1,11 @@
-import { SlashCommandBuilder } from 'npm:discord.js';
-import { Command } from '../command.ts';
-import { exec } from 'node:child_process';
+import { PermissionFlagsBits, SlashCommandBuilder } from 'npm:discord.js';
+import { Command, GuildsStorage } from '../types.d.ts';
 import { ConfigHelper } from '../utils.ts';
 export const command: Command = {
     commandBuilder: new SlashCommandBuilder()
         .setName('setup')
         .setDescription('Set Default Values')
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addSubcommand(c => c
             .setName('set-fallback-channel')
             .setDescription('Set channel to broadcast in')
@@ -43,46 +43,37 @@ export const command: Command = {
             )
         ),
     runnable: async function (interaction) {
-        const settings = new ConfigHelper('./settings.json');
+        if (!interaction.guildId) return;
+        const channel = interaction.options.get('channel')?.channel;
+        const guildId = interaction.guildId.toString();
+        const guildStorageManager = new ConfigHelper('./settings.json');
+        const gsStorage = guildStorageManager.getFull() as GuildsStorage;
+        if (typeof gsStorage[guildId] !== 'object') gsStorage[guildId] = {};
+
         switch(interaction.options.getSubcommand()){
             case 'set-fallback-channel': {
-                const channel = interaction.options.get('channel')?.channel;
-                const json = settings.getFull();
-                if (!interaction.guildId) return;
-                if (typeof json[interaction.guildId.toString()] !== 'object') json[interaction.guildId.toString()] = {};
-                json[interaction.guildId.toString()].fallbackChannel = channel?.id;
-                settings.setFull(json);
-                interaction.reply(`Setting fallback channel to: <#${channel?.id}>`);
+                gsStorage[guildId].fallbackChannel = channel?.id;
+                guildStorageManager.setFull(gsStorage);
+                await interaction.reply(`Setting fallback channel to: <#${channel?.id}>`);
                 break;
             }
             case 'set-videos-channel': {
-                const channel = interaction.options.get('channel')?.channel;
-                const json = settings.getFull();
-                if (!interaction.guildId) return;
-                if (typeof json[interaction.guildId.toString()] !== 'object') json[interaction.guildId.toString()] = {};
-                json[interaction.guildId.toString()].videosChannel = channel?.id;
-                settings.setFull(json);
-                interaction.reply(`Setting videos channel to: <#${channel?.id}>`);
+                gsStorage[guildId].videosChannel = channel?.id;
+                guildStorageManager.setFull(gsStorage);
+                await interaction.reply(`Setting videos channel to: <#${channel?.id}>`);
                 break;
             }
             case 'set-shorts-channel': {
-                const channel = interaction.options.get('channel')?.channel;
-                const json = settings.getFull();
-                if (!interaction.guildId) return;
-                if (typeof json[interaction.guildId.toString()] !== 'object') json[interaction.guildId.toString()] = {};
-                json[interaction.guildId.toString()].shortsChannel = channel?.id;
-                settings.setFull(json);
-                interaction.reply(`Setting shorts channel to: <#${channel?.id}>`);
+                gsStorage[guildId].shortsChannel = channel?.id;
+                guildStorageManager.setFull(gsStorage);
+                await interaction.reply(`Setting shorts channel to: <#${channel?.id}>`);
                 break;
             }
             case 'set-mention': {
                 const role = interaction.options.get('role')?.role;
-                const json = settings.getFull();
-                if (!interaction.guildId) return;
-                if (typeof json[interaction.guildId.toString()] !== 'object') json[interaction.guildId.toString()] = {};
-                json[interaction.guildId.toString()].role = role?.id;
-                settings.setFull(json);
-                interaction.reply({'allowedMentions': {},'content': `Setting default mention to: <@&${role?.id}>`});
+                gsStorage[guildId].role = role?.id;
+                guildStorageManager.setFull(gsStorage);
+                await interaction.reply({'allowedMentions': {},'content': `Setting default mention to: <@&${role?.id}>`});
                 break;
             }
         }

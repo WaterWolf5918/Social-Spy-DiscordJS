@@ -1,20 +1,17 @@
 import { REST } from 'npm:@discordjs/rest';
 import { Routes } from 'npm:discord-api-types/v9';
-import { Client, GatewayIntentBits, EmbedBuilder, SlashCommandBuilder, Message, TextChannel, messageLink, Utils, AuditLogEvent, Guild, ChannelType, VoiceChannel, Invite } from 'npm:discord.js';
+import { Client, GatewayIntentBits, TextChannel} from 'npm:discord.js';
 import * as fs from 'node:fs';
 import chalk from 'npm:chalk';
 import { Logger } from './logger.ts';
-import { Command } from './command.ts';
 import { ConfigHelper } from './utils.ts';
 import { getEntryType, refreshChannel } from './refreshEngine.ts';
+import { Command, GuildConfig } from './types.d.ts';
 
 // Variables \\
-
-
 export const config = loadConfig('./config.json');
-// eslint-disable-next-line prefer-const
-export let channelList: Record<string,refreshChannel> = {};
-const rest = new REST({ version: '9' }).setToken(config.token); // For slash commands
+export const channelList: Record<string,refreshChannel> = {};
+export const rest = new REST({ version: '9' }).setToken(config.token); // For slash commands
 const commands: Command[] = [];
 
 export const client = new Client({
@@ -82,16 +79,6 @@ async function initializeCommands() {
                 t.push(commands[i].commandBuilder);
             }
         }
-        // Delete Commands
-        // await rest.put(Routes.applicationGuildCommands(config.clientID, '1330003358614028378'), { body: [] })
-        //     .then(() => console.log('Successfully deleted all guild commands.'))
-        //     .catch(console.error);
-    
-        // // for global commands
-        // await rest.put(Routes.applicationCommands(config.clientID), { body: [] })
-        //     .then(() => console.log('Successfully deleted all application commands.'))
-        //     .catch(console.error);
-
 
         await rest.put(
 
@@ -107,16 +94,16 @@ async function initializeCommands() {
 
 // Events \\
 
-client.on('ready', async () => {
+client.on('ready',() => {
 
     Logger.log(`Logged in as ${client.user?.tag}!`);
     Logger.log('Scanning guilds for youtube users');
     const settings = new ConfigHelper('./settings.json');
     const json = settings.getFull();
-    client.guilds.cache.forEach(async (guild) => {
+    client.guilds.cache.forEach((guild) => {
         // Logger.log(` - ${guild.name}`);
-        const guildConfig = json[guild.id.toString()];
-        if (typeof guildConfig !== 'object') { Logger.log(` - ${guild.name} : ${chalk.gray('Config Not Found')}`); return; }
+        const guildConfig: GuildConfig = json[guild.id.toString()] as GuildConfig;
+        if (typeof guildConfig !== 'object' || guildConfig == null) { Logger.log(` - ${guild.name} : ${chalk.gray('Config Not Found')}`); return; }
         Logger.log(` - ${guild.name} : ${chalk.gray('Config Found')}`);
         if (!guildConfig.role && ! guildConfig.fallbackChannel){
             Logger.error('No Default Channel and or Role');
@@ -126,30 +113,30 @@ client.on('ready', async () => {
         const YtUsers = guildConfig.YtUsers;
         if (!YtUsers || YtUsers.length < 1) return;
 
-        YtUsers.forEach(async (user: string) => {
+        YtUsers.forEach((user: string) => {
             channelList[user] = new refreshChannel(user,config.apiKey);
             
             // fallbackChannel.send(`Listening to ${user}`);
             channelList[user].on('newVideo',(updatedEntry) => {
-                handleYoutubeRefresh(updatedEntry,guildConfig);
+                handleYoutubeRefresh(updatedEntry,guildConfig,guild.id);
             });
         });
     });
-    
-
-    
-
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function handleYoutubeRefresh(updatedEntry: any,guildConfig: Record<string,string>){
-    const fallbackChannel = (await client.channels.cache.get(guildConfig.fallbackChannel) as TextChannel);
+// deno-lint-ignore no-explicit-any
+export function handleYoutubeRefresh(updatedEntry: any,guildConfig: GuildConfig,guildId: string){
+    if (typeof guildConfig.fallbackChannel !== 'string') {
+        Logger.error(`[${guildId}] No fallback channel`)
+        return;
+    }
+    const fallbackChannel = (client.channels.cache.get(guildConfig.fallbackChannel) as TextChannel);
     getEntryType(updatedEntry,config.apiKey)
-        .then(async type => {
+        .then(type => {
             switch (type) {
                 case 'video': {
                     if (typeof guildConfig.videosChannel == 'string'){
-                        const textChannel = (await client.channels.cache.get(guildConfig.videosChannel) as TextChannel);
+                        const textChannel = (client.channels.cache.get(guildConfig.videosChannel) as TextChannel);
                         textChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded a video!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
                     } else {
                         fallbackChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded content!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# ${client.user?.tag} Was unable to find a dedicated textChannel.\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
@@ -158,7 +145,7 @@ export async function handleYoutubeRefresh(updatedEntry: any,guildConfig: Record
                 }
                 case 'short': {
                     if (typeof guildConfig.shortsChannel == 'string'){
-                        const textChannel = (await client.channels.cache.get(guildConfig.shortsChannel) as TextChannel);
+                        const textChannel = (client.channels.cache.get(guildConfig.shortsChannel) as TextChannel);
                         textChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded a short!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
                     } else {
                         fallbackChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded content!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# ${client.user?.tag} Was unable to find a dedicated textChannel.\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
@@ -166,13 +153,13 @@ export async function handleYoutubeRefresh(updatedEntry: any,guildConfig: Record
                     break;  
                 }
             }
-        }).catch(e => {
+        }).catch(() => {
             fallbackChannel.send(`Hey <@&${guildConfig.role}> ${updatedEntry.author.name} Just uploaded content!\n https://www.youtube.com/watch?v=${updatedEntry['yt:videoId']}\n-# ${client.user?.tag} Was unable to detect what media type this upload was.\n-# I am a bot, and this action was performed automatically. I am not perfect if you notice a issue please contact a server admin.`);
         });
 }
 
 
-client.on('interactionCreate', async interaction => {
+client.on('interactionCreate', interaction => {
     if (!interaction.isCommand()) return;
     if (!interaction.isChatInputCommand()) return;
     for (let i = 0; i < commands.length; i++) {

@@ -1,11 +1,11 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'npm:discord.js';
-import { Command } from '../command.ts';
 import { ConfigHelper } from '../utils.ts';
 
 import { XMLParser } from 'fast-xml-parser';
 import { Logger } from '../logger.ts';
 import { channelList, config, handleYoutubeRefresh } from '../index.ts';
 import { refreshChannel } from '../refreshEngine.ts';
+import { Command, GuildConfig } from '../types.d.ts';
 export const command: Command = {
     commandBuilder: new SlashCommandBuilder()
         .setName('users')
@@ -48,11 +48,13 @@ export const command: Command = {
         if (interaction.guildId == null) return; // If this happens were all fucked anyways so don't bother with a error
         const settings = new ConfigHelper('./settings.json');
         const settingsJson = settings.getFull();
-        let guildConfig = settingsJson[interaction.guildId];
+        let guildConfig = settingsJson[interaction.guildId] as GuildConfig;
         // Error Handleing
         if (typeof guildConfig !== 'object'){ 
             Logger.log(`[${interaction.guild?.name}] guildConfig isn't a object. Remaking...`);
-            guildConfig = {};
+            guildConfig = {
+                YtUsers: [],
+            }
         }
 
 
@@ -70,7 +72,8 @@ export const command: Command = {
                         settings.setFull(settingsJson);
                         channelList[user] = new refreshChannel(user,config.apiKey);
                         channelList[user].on('newVideo',(updatedEntry) => {
-                            handleYoutubeRefresh(updatedEntry,guildConfig);
+                            if (!interaction.guild) return; 
+                            handleYoutubeRefresh(updatedEntry,guildConfig,interaction.guild.id);
                         });
                         
                         await interaction.followUp(`Started watching ${user}'s channel.`);

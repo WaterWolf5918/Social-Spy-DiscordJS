@@ -1,7 +1,8 @@
-import chalk from 'npm:chalk';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { Logger } from './logger.ts';
+import { Routes } from 'discord.js';
+import { config, rest } from './index.ts';
 
 export function roundDec(float: string | number,places: number){
     return +parseFloat(float.toString()).toFixed(places);
@@ -18,14 +19,11 @@ export class ConfigHelper {
         }
     }
 
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getFull(): Record<string, any> {
+    getFull(): Record<string, unknown> {
         return JSON.parse(readFileSync(this.configFile, 'utf-8'));
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    get(key: string): any {
+    get(key: string): unknown {
         if (this.getFull()[key] !== null) {
             return this.getFull()[key];
         } else {
@@ -35,8 +33,8 @@ export class ConfigHelper {
             // return 'ERROR';
         }
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    set(key: string, value: any): string {
+
+    set(key: string, value: unknown): string {
         if (this.getFull()[key] !== null) {
             const full = this.getFull();
             full[key] = value;
@@ -55,5 +53,17 @@ export class ConfigHelper {
             JSON.stringify(json, null, 4),
         );
     }
-
 }
+
+export async function deleteGuildSlashCommands(guildId: string){
+    await rest.put(Routes.applicationGuildCommands(config.clientID, guildId), { body: [] })
+        .then(() => console.log('Successfully deleted all guild commands.'))
+        .catch(console.error);
+}
+
+export async function deleteGlobalSlashCommands(){
+    await rest.put(Routes.applicationCommands(config.clientID), { body: [] })
+        .then(() => console.log('Successfully deleted all application commands.'))
+        .catch(console.error);
+}
+
