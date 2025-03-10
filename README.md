@@ -32,7 +32,7 @@ npm install
 
 Start the bot:
 ```
-node index.js
+deno -A ./src/index.ts
 ```
 ## Usage
 
